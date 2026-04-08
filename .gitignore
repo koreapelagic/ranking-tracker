@@ -1,0 +1,6 @@
+node_modules/
+ranking.db
+.env
+chrome-debug-profile/
+chrome-profile/
+debug/

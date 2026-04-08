@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>가시제거연구소 순위 트래커</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Noto Sans KR',-apple-system,sans-serif;background:#F5F7FA;color:#1a1a2e;min-height:100vh}
+    :root{--pri:#0068E5;--pri-l:#E8F2FF;--ok:#00C73C;--gold:#FFB81C;--bronze:#CD7F32;--gl:#E8E8E8;--gt:#999;--td:#1a1a2e;--bg:#FFF;--sh:0 2px 8px rgba(0,0,0,.06);--shm:0 4px 16px rgba(0,0,0,.10);--r:12px;--dn:#FF4757}
+    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .fade{animation:fadeIn .3s ease-out}
+
+    .nav{background:linear-gradient(135deg,#003D8F 0%,var(--pri) 100%);color:#fff;padding:0 24px;position:sticky;top:0;z-index:100;box-shadow:var(--shm)}
+    .nav-inner{max-width:1440px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:54px}
+    .nav h1{font-size:17px;font-weight:700}
+    .nav-tabs{display:flex;gap:2px}
+    .nav-tab{background:none;border:none;color:rgba(255,255,255,.55);padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0;transition:.2s;font-family:inherit}
+    .nav-tab:hover{color:#fff;background:rgba(255,255,255,.1)}
+    .nav-tab.on{color:#fff;background:rgba(255,255,255,.18)}
+    .nav-acts{display:flex;gap:6px}
+    .btn{padding:7px 14px;border:none;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:.15s;font-family:inherit;white-space:nowrap}
+    .btn:hover{transform:translateY(-1px);box-shadow:var(--shm)}
+    .bw{background:rgba(255,255,255,.2);color:#fff}.bw:hover{background:rgba(255,255,255,.3)}
+    .bp{background:var(--pri);color:#fff}.bp:hover{background:#0056CC}
+    .bs{background:var(--bg);color:var(--pri);border:1.5px solid var(--pri)}.bs:hover{background:var(--pri-l)}
+    .bsm{padding:4px 9px;font-size:10px}.bxs{padding:3px 6px;font-size:9px;border-radius:5px}
+    .bd{color:var(--dn);border-color:var(--dn)}.bd:hover{background:#FFF0F0}
+    .wrap{max-width:1440px;margin:0 auto;padding:18px 14px}
+
+    .goal-bar{background:var(--bg);border-radius:var(--r);padding:14px 18px;box-shadow:var(--sh);margin-bottom:14px;display:flex;align-items:center;gap:14px}
+    .goal-label{font-size:13px;font-weight:700;white-space:nowrap}
+    .goal-track{flex:1;height:8px;background:var(--gl);border-radius:4px;overflow:hidden}
+    .goal-fill{height:100%;background:linear-gradient(90deg,var(--pri),var(--ok));border-radius:4px;transition:width .5s}
+    .goal-num{font-size:15px;font-weight:800;color:var(--pri);white-space:nowrap}
+
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+    @media(max-width:768px){.stats{grid-template-columns:repeat(2,1fr)}}
+    .stat{background:var(--bg);border-radius:var(--r);padding:14px;box-shadow:var(--sh);border-left:3px solid var(--pri)}
+    .stat.gold{border-left-color:var(--gold)}.stat.ok{border-left-color:var(--ok)}.stat.warn{border-left-color:var(--dn)}
+    .stat-t{font-size:10px;font-weight:600;color:var(--gt);text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px}
+    .stat-v{font-size:22px;font-weight:800}
+    .stat .stat-v{color:var(--pri)}.stat.gold .stat-v{color:var(--gold)}.stat.ok .stat-v{color:var(--ok)}
+
+    .insight-box{background:var(--bg);border-radius:var(--r);padding:14px 18px;box-shadow:var(--sh);margin-bottom:14px}
+    .insight-box h3{font-size:13px;font-weight:700;margin-bottom:8px}
+    .ins-list{list-style:none;display:flex;flex-direction:column;gap:4px}
+    .ins-item{font-size:11px;color:#444;padding:5px 10px;background:#F8F9FA;border-radius:6px;line-height:1.5;border-left:3px solid var(--pri)}
+    .ins-item.gold{border-left-color:var(--gold)}.ins-item.ok{border-left-color:var(--ok)}.ins-item.warn{border-left-color:var(--dn)}
+
+    .tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+    .tag{padding:3px 8px;border-radius:14px;font-size:10px;font-weight:600}
+    .tag.up{background:#E8FFF0;color:#00A833}.tag.dn{background:#FFF0F0;color:#FF4757}
+    .tag.crown{background:#FFF8E0;color:#CC8800}.tag.gray{background:#F5F5F5;color:#888}
+
+    .fbar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+    .ftabs{display:flex;gap:2px;background:var(--bg);border-radius:var(--r);padding:3px;box-shadow:var(--sh)}
+    .ft{padding:5px 10px;border:none;background:none;font-size:11px;font-weight:600;cursor:pointer;border-radius:7px;color:var(--gt);transition:.2s;font-family:inherit}
+    .ft:hover{color:var(--td)}.ft.on{background:var(--pri);color:#fff}
+    .sel{padding:5px 10px;border:1.5px solid var(--gl);border-radius:var(--r);background:var(--bg);font-size:11px;font-weight:500;cursor:pointer;font-family:inherit}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+    @media(max-width:640px){.grid{grid-template-columns:repeat(2,1fr);gap:8px}}
+
+    .card{background:var(--bg);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);transition:.2s;cursor:pointer;position:relative}
+    .card:hover{transform:translateY(-3px);box-shadow:var(--shm)}
+    .card.r1{border:2px solid var(--gold);background:linear-gradient(to bottom,#FFFEF5,var(--bg))}
+    .card-crown{position:absolute;top:5px;right:5px;background:var(--gold);color:#fff;padding:2px 7px;border-radius:12px;font-size:9px;font-weight:800;z-index:2}
+    .card-img{width:100%;aspect-ratio:1/1;background:#f0f0f0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .card-img img{width:100%;height:100%;object-fit:cover}
+    .card-body{padding:8px 10px}
+    .card-name{font-size:11px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:3px}
+    .card-meta{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+    .card-price{font-size:12px;font-weight:700;color:var(--pri)}
+    .card-rv{font-size:10px;color:var(--gt)}
+    .card-time{font-size:9px;color:var(--gt);margin-bottom:4px}
+    .kws{display:flex;flex-direction:column;gap:2px}
+    .kw{display:flex;align-items:center;gap:3px;font-size:9px}
+    .kw-r{min-width:40px;padding:2px 4px;border-radius:3px;font-weight:700;font-size:9px;color:#fff;text-align:center}
+    .kw-r.r1{background:var(--gold)}.kw-r.r3{background:var(--bronze)}.kw-r.r10{background:var(--ok)}.kw-r.rout{background:var(--gl);color:var(--gt)}
+    .kw-n{color:#555;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .kw-c{font-weight:700;font-size:8px}
+    .kw-c.up{color:var(--ok)}.kw-c.dn{color:var(--dn)}.kw-c.no{color:var(--gt)}
+    .card-acts{display:flex;gap:3px;padding:6px 8px;border-top:1px solid var(--gl)}
+    .card-acts .btn{flex:1}
+
+    .ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200}
+    .modal{background:var(--bg);border-radius:var(--r);padding:22px;max-width:720px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:var(--shm)}
+    .mh{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+    .mx{background:none;border:none;font-size:18px;cursor:pointer;color:var(--gt)}.mx:hover{color:var(--td)}
+    .ml{display:block;font-size:10px;font-weight:600;color:var(--gt);text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px}
+    .ms{margin-bottom:14px}
+    .inp{width:100%;padding:7px 9px;border:1.5px solid var(--gl);border-radius:var(--r);font-size:11px;font-family:inherit;transition:.2s}
+    .inp:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 2px rgba(0,104,229,.08)}
+
+    .tbl{width:100%;border-collapse:collapse;font-size:10px}
+    .tbl th{background:#F8F9FA;padding:7px 5px;text-align:left;font-weight:600;position:sticky;top:0;z-index:1}
+    .tbl td{padding:5px;border-bottom:1px solid var(--gl)}
+    .tbl tr:hover td{background:var(--pri-l)}
+    .tbl-wrap{max-height:500px;overflow:auto;border:1px solid var(--gl);border-radius:var(--r)}
+
+    .cp-tabs{display:flex;gap:3px;margin-bottom:8px}
+    .cp{padding:3px 8px;border:1px solid var(--gl);border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;background:var(--bg);color:var(--gt);font-family:inherit}
+    .cp:hover{border-color:var(--pri);color:var(--pri)}.cp.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+
+    .toast{position:fixed;bottom:16px;right:16px;background:var(--bg);padding:10px 14px;border-radius:var(--r);box-shadow:var(--shm);display:flex;align-items:center;gap:6px;z-index:300;animation:fadeIn .3s;max-width:300px;font-size:12px}
+    .toast.ok{border-left:4px solid var(--ok)}.toast.err{border-left:4px solid var(--dn)}
+    .loading{display:flex;align-items:center;justify-content:center;padding:50px;flex-direction:column;gap:8px}
+    .spinner{width:28px;height:28px;border:3px solid var(--gl);border-top-color:var(--pri);border-radius:50%;animation:spin .7s linear infinite}
+    .tog{position:relative;display:inline-block;width:36px;height:20px}
+    .tog input{opacity:0;width:0;height:0}.tog-s{position:absolute;cursor:pointer;inset:0;background:var(--gl);border-radius:20px;transition:.3s}
+    .tog-s:before{content:'';position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+    input:checked+.tog-s{background:var(--ok)}input:checked+.tog-s:before{transform:translateX(16px)}
+    .empty{text-align:center;padding:30px;color:var(--gt);font-size:12px}
+    @media(max-width:768px){.nav-inner{flex-wrap:wrap;height:auto;padding:8px 0;gap:5px}.wrap{padding:12px 6px}.modal{padding:16px}.fbar{flex-direction:column}.goal-bar{flex-direction:column;text-align:center}}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const {useState,useEffect,useRef}=React;
+    const fmt=n=>n?parseInt(n).toLocaleString():'0';
+    const rTxt=r=>(!r||r>300)?'순위권 밖':r+'순위';
+    const rCls=r=>{if(!r||r>300)return'rout';if(r===1)return'r1';if(r<=3)return'r3';if(r<=10)return'r10';return'rout';};
+    // KST 시간 표시
+    const kst=t=>{if(!t)return'';try{
+      // DB에 이미 KST로 저장되므로 그대로 파싱
+      const p=t.replace(' ','T');const d=new Date(p);
+      if(isNaN(d.getTime())){return t.slice(5,16).replace('-','/').replace('T',' ');}
+      return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    }catch(e){return'';}};
+    // 전일대비 변동 (양수=상승, 음수=하락)
+    const chg=(prev,curr)=>{
+      if(!prev||!curr)return{t:'NEW',c:'no'};
+      const d=prev-curr;
+      if(d>0)return{t:'▲'+d,c:'up'};
+      if(d<0)return{t:'▼'+Math.abs(d),c:'dn'};
+      return{t:'—',c:'no'};
+    };
+
+    function App(){
+      const[pg,setPg]=useState('dashboard');
+      const[products,setProducts]=useState([]);
+      const[dash,setDash]=useState(null);
+      const[ov,setOv]=useState(null);
+      const[loading,setLoading]=useState(true);
+      const[sort,setSort]=useState('id');
+      const[filter,setFilter]=useState('all');
+      const[viewMode,setViewMode]=useState('tile');
+      const[selProd,setSelProd]=useState(null);
+      const[showAdd,setShowAdd]=useState(false);
+      const[showAlert,setShowAlert]=useState(false);
+      const[checking,setChecking]=useState(false);
+      const[toast,setToast]=useState(null);
+
+      const load=async()=>{try{setLoading(true);
+        const[pR,dR,oR]=await Promise.all([fetch('/api/products'),fetch('/api/dashboard'),fetch('/api/overview')]);
+        if(pR.ok)setProducts(await pR.json());if(dR.ok)setDash(await dR.json());if(oR.ok)setOv(await oR.json());
+      }catch(e){toast_('로드 실패','err');}finally{setLoading(false);}};
+      const toast_=(m,t='ok')=>{setToast({m,t});setTimeout(()=>setToast(null),3000);};
+      useEffect(()=>{load();const iv=setInterval(load,60000);return()=>clearInterval(iv);},[]);
+      const[checkProgress,setCheckProgress]=useState(null);
+      const checkAll=async()=>{setChecking(true);setCheckProgress('순위 조회 중...');try{const r=await fetch('/api/rankings/check-all',{method:'POST'});if(r.ok){toast_('순위 체크 시작');const poll=setInterval(async()=>{try{const pr=await fetch('/api/dashboard');if(pr.ok){const d=await pr.json();setCheckProgress(`조회 중... (${d.todayChecks}건 완료)`);}}catch(e){}},3000);setTimeout(()=>{clearInterval(poll);setChecking(false);setCheckProgress(null);load();},120000);setTimeout(async()=>{await load();},8000);}}catch(e){toast_('실패','err');setChecking(false);setCheckProgress(null);}};
+
+      const downloadPDF=async()=>{
+        toast_('보고서 생성 중...');
+        try{
+          const r=await fetch('/api/report/data');
+          if(!r.ok)throw new Error('데이터 로드 실패');
+          const d=await r.json();
+          const html=generateReportHTML(d);
+          const blob=new Blob(['\uFEFF'+html],{type:'text/html;charset=utf-8'});
+          const url=URL.createObjectURL(blob);
+          const link=document.createElement('a');
+          link.href=url;
+          link.download='가시제거연구소_순위보고서_'+d.date+'.html';
+          link.style.display='none';
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(()=>{document.body.removeChild(link);URL.revokeObjectURL(url);},100);
+          toast_('보고서 다운로드 완료');
+        }catch(e){console.error('Report error:',e);toast_('보고서 생성 실패: '+e.message,'err');}
+      };
+
+      const generateReportHTML=(d)=>{
+        const rows=d.products.filter(p=>p.keywords.some(k=>k.rank)).map(p=>{
+          return p.keywords.map((k,i)=>`<tr>
+            ${i===0?`<td rowspan="${p.keywords.length}" style="font-weight:600;vertical-align:top;max-width:200px;word-break:break-all">${p.name}</td>`:''}
+            <td>${k.keyword}</td>
+            <td style="font-weight:700;color:${k.rank===1?'#CC8800':k.rank<=10?'#00A833':'#333'}">${k.rank?k.rank+'순위':'순위권 밖'}</td>
+            <td>${k.prevRank?k.prevRank+'순위':'-'}</td>
+            <td style="color:${k.change>0?'#00A833':k.change<0?'#FF4757':'#999'}">${k.change>0?'▲'+k.change:k.change<0?'▼'+Math.abs(k.change):k.change===0?'—':'NEW'}</td>
+          </tr>`).join('');
+        }).join('');
+
+        return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<title>가시제거연구소 순위 보고서 ${d.date}</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans KR',sans-serif;padding:30px;color:#1a1a2e;max-width:900px;margin:0 auto;font-size:12px}
+@media print{body{padding:15px}@page{margin:15mm}}
+h1{font-size:20px;color:#003D8F;border-bottom:3px solid #003D8F;padding-bottom:8px;margin-bottom:16px}
+.meta{color:#666;font-size:11px;margin-bottom:20px}
+.section{margin-bottom:20px}
+.section h2{font-size:14px;font-weight:700;color:#003D8F;margin-bottom:8px;padding:6px 10px;background:#E8F2FF;border-radius:4px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.card{border:1px solid #e0e0e0;border-radius:6px;padding:10px;text-align:center}
+.card .num{font-size:22px;font-weight:800}.card .label{font-size:9px;color:#666}
+.gold{color:#CC8800}.green{color:#00A833}.blue{color:#0068E5}
+.insight{background:#F8F9FA;border-left:3px solid #003D8F;padding:8px 12px;margin-bottom:6px;border-radius:0 4px 4px 0;font-size:11px;line-height:1.6}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{background:#F0F4F8;padding:6px 4px;text-align:left;font-weight:600;border-bottom:2px solid #ddd}
+td{padding:4px;border-bottom:1px solid #eee}
+tr:hover td{background:#F8FAFF}
+.footer{text-align:center;margin-top:30px;font-size:9px;color:#999;border-top:1px solid #eee;padding-top:10px}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.tag{padding:2px 8px;border-radius:10px;font-size:9px;font-weight:600}
+.tag-gold{background:#FFF8E0;color:#CC8800}.tag-up{background:#E8FFF0;color:#00A833}.tag-dn{background:#FFF0F0;color:#FF4757}
+</style></head><body>
+<h1>가시제거연구소 네이버쇼핑 순위 보고서</h1>
+<div class="meta">보고일시: ${d.time} (KST) | 보고 대상: 가시제거연구소 스마트스토어</div>
+
+<div class="section">
+<h2>순위 현황 요약</h2>
+<div class="grid">
+  <div class="card"><div class="num blue">${d.summary.totalProducts}</div><div class="label">전체 상품</div></div>
+  <div class="card"><div class="num blue">${d.summary.totalKws}</div><div class="label">전체 키워드</div></div>
+  <div class="card"><div class="num gold">${d.summary.rank1}</div><div class="label">1순위 달성</div></div>
+  <div class="card"><div class="num green">${d.summary.top10}</div><div class="label">TOP10 진입</div></div>
+</div>
+<div class="grid">
+  <div class="card"><div class="num blue">${d.summary.avgRank}위</div><div class="label">평균 순위</div></div>
+  <div class="card"><div class="num green">${d.summary.checkedKws}</div><div class="label">조회 완료</div></div>
+  <div class="card"><div class="num" style="color:#FF4757">${d.summary.outOfRank}</div><div class="label">순위권 밖</div></div>
+  <div class="card"><div class="num gold">${d.summary.rank1}/10</div><div class="label">목표 달성률</div></div>
+</div>
+</div>
+
+${d.rank1Keywords.length>0?`<div class="section"><h2>1순위 달성 키워드</h2>
+<div class="tags">${d.rank1Keywords.map(r=>`<span class="tag tag-gold">👑 ${r.keyword} — ${r.product.substring(0,25)}</span>`).join('')}</div></div>`:''}
+
+${d.bigRisers.length>0||d.bigDroppers.length>0?`<div class="section"><h2>주요 순위 변동</h2>
+<div class="tags">
+${d.bigRisers.map(r=>`<span class="tag tag-up">▲ ${r.keyword} ${r.prev}→${r.curr}순위</span>`).join('')}
+${d.bigDroppers.map(r=>`<span class="tag tag-dn">▼ ${r.keyword} ${r.prev}→${r.curr}순위</span>`).join('')}
+</div></div>`:''}
+
+<div class="section"><h2>전체 상품 순위 상세</h2>
+<table>
+<thead><tr><th style="min-width:160px">상품명</th><th>키워드</th><th>현재순위</th><th>이전순위</th><th>변동</th></tr></thead>
+<tbody>${rows}</tbody>
+</table></div>
+
+<div class="footer">
+이 보고서는 가시제거연구소 순위 트래커에서 자동 생성되었습니다.<br>
+데이터 기준일: ${d.date} | 네이버 쇼핑 검색 API 기반
+</div>
+</body></html>`;
+      };
+
+      // 순위권 밖 탭: 키워드 중 1개라도 순위권 밖이면 표시
+      const filtered=products.filter(p=>{
+        const ranks=p.keywords?.map(k=>k.latest_rank)||[];
+        const best=ranks.length>0?Math.min(...ranks.map(r=>r||999)):999;
+        const hasOut=ranks.some(r=>!r||r>300);
+        if(filter==='top10')return best<=10;
+        if(filter==='rank1')return best===1;
+        if(filter==='out')return hasOut;
+        return true;
+      });
+      const sorted=[...filtered].sort((a,b)=>{
+        const rk=p=>Math.min(...(p.keywords?.map(k=>k.latest_rank||999)||[999]));
+        if(sort==='review')return(b.review_count||0)-(a.review_count||0);
+        if(sort==='rank')return rk(a)-rk(b);
+        if(sort==='change'){const c=p=>{const cs=p.keywords?.map(k=>(k.prev_rank||999)-(k.latest_rank||999))||[];return cs.length?Math.max(...cs):0;};return c(b)-c(a);}
+        if(sort==='id'){
+          const idA=parseInt((a.product_url||'').match(/products\/(\d+)/)?.[1])||a.id||0;
+          const idB=parseInt((b.product_url||'').match(/products\/(\d+)/)?.[1])||b.id||0;
+          return idA-idB;
+        }
+        return(a.product_name||'').localeCompare(b.product_name||'');
+      });
+
+      if(loading&&!dash)return(<div><div className="nav"><div className="nav-inner"><h1>가시제거연구소 순위 트래커</h1></div></div><div className="loading"><div className="spinner"></div><span style={{color:'var(--gt)',fontSize:12}}>로딩 중...</span></div></div>);
+
+      return(<div>
+        <div className="nav"><div className="nav-inner">
+          <h1>가시제거연구소 순위 트래커</h1>
+          <div className="nav-tabs">
+            <button className={`nav-tab ${pg==='dashboard'?'on':''}`} onClick={()=>setPg('dashboard')}>대시보드</button>
+            <button className={`nav-tab ${pg==='table'?'on':''}`} onClick={()=>setPg('table')}>기간별 조회</button>
+          </div>
+          <div className="nav-acts">
+            {checkProgress&&<span style={{color:'rgba(255,255,255,.85)',fontSize:10,fontWeight:600,display:'flex',alignItems:'center',gap:4,marginRight:4,animation:'fadeIn .3s'}}><div className="spinner" style={{width:14,height:14,borderWidth:2}}></div>{checkProgress}</span>}
+            <button className="btn bw" onClick={checkAll} disabled={checking}>{checking?'조회중...':'전체 순위 조회'}</button>
+            <button className="btn bw" onClick={downloadPDF}>보고서</button>
+            <a className="btn bw" href="/api/report/csv" style={{textDecoration:'none'}}>CSV</a>
+            <button className="btn bw" onClick={()=>setShowAlert(true)}>알림</button>
+          </div>
+        </div></div>
+
+        <div className="wrap">{pg==='dashboard'?
+          <Dash products={products} dash={dash} ov={ov} sorted={sorted} filter={filter} setFilter={setFilter} sort={sort} setSort={setSort} viewMode={viewMode} setViewMode={setViewMode} onSel={setSelProd} onAdd={()=>setShowAdd(true)} onUpdate={load}/>:
+          <TablePage/>}
+        </div>
+
+        {selProd&&<ProdModal product={selProd} onClose={()=>setSelProd(null)} onUpdate={load} toast_={toast_}/>}
+        {showAdd&&<AddModal onClose={()=>setShowAdd(false)} onAdd={load} toast_={toast_}/>}
+        {showAlert&&<AlertModal onClose={()=>setShowAlert(false)}/>}
+        {toast&&<div className={`toast ${toast.t}`}><span>{toast.t==='ok'?'✅':'❌'}</span>{toast.m}</div>}
+      </div>);
+    }
+
+    function Dash({products,dash,ov,sorted,filter,setFilter,sort,setSort,viewMode,setViewMode,onSel,onAdd,onUpdate}){
+      const r1=dash?.rank1Count||0;
+      return(<div className="fade">
+        <div className="goal-bar">
+          <div className="goal-label">목표: 1순위 10개</div>
+          <div className="goal-track"><div className="goal-fill" style={{width:`${r1/10*100}%`}}></div></div>
+          <div className="goal-num">{r1}/10</div>
+        </div>
+        <div className="stats">
+          <div className="stat"><div className="stat-t">전체 상품</div><div className="stat-v">{dash?.totalProducts||0}</div></div>
+          <div className="stat"><div className="stat-t">전체 키워드</div><div className="stat-v">{dash?.totalKeywords||0}</div></div>
+          <div className="stat ok"><div className="stat-t">오늘 체크</div><div className="stat-v">{dash?.todayChecks||0}</div></div>
+          <div className="stat gold"><div className="stat-t">1순위 달성</div><div className="stat-v">{r1}개</div></div>
+        </div>
+
+        {ov?.insights&&ov.insights.length>0&&<div className="insight-box">
+          <h3>스토어 순위 인사이트</h3>
+          <ul className="ins-list">{ov.insights.map((l,i)=><li key={i} className={`ins-item ${l.includes('1순위')?'gold':l.includes('급상승')||l.includes('TOP10')?'ok':l.includes('주의')||l.includes('급하락')?'warn':''}`}>{l}</li>)}</ul>
+        </div>}
+
+        {ov&&<div className="tags">
+          {ov.rank1Products?.map((r,i)=><span key={'c'+i} className="tag crown">👑 {r.keyword} 1순위</span>)}
+          {ov.bigRisers?.map((r,i)=><span key={'u'+i} className="tag up">▲ {r.keyword} {r.prev_rank}→{r.curr_rank}순위</span>)}
+          {ov.bigDroppers?.map((r,i)=><span key={'d'+i} className="tag dn">▼ {r.keyword} {r.prev_rank}→{r.curr_rank}순위</span>)}
+          {ov.uncheckedKeywords>0&&<span className="tag gray">미조회 {ov.uncheckedKeywords}개</span>}
+          {ov.lastCheck&&<span className="tag gray">최근: {kst(ov.lastCheck)}</span>}
+        </div>}
+
+        <div className="fbar">
+          <div className="ftabs">
+            {[{v:'top10',l:'TOP10'},{v:'rank1',l:'1순위'},{v:'out',l:'순위권 밖'},{v:'all',l:'전체'}].map(t=>(
+              <button key={t.v} className={`ft ${filter===t.v?'on':''}`} onClick={()=>setFilter(t.v)}>{t.l}</button>))}
+          </div>
+          <select className="sel" value={sort} onChange={e=>setSort(e.target.value)}>
+            <option value="id">상품번호순</option>
+            <option value="review">리뷰 많은순</option>
+            <option value="rank">최고 순위순</option>
+            <option value="change">순위 변동순</option>
+            <option value="name">상품명순</option>
+          </select>
+          <div className="ftabs" style={{marginLeft:6}}>
+            <button className={`ft ${viewMode==='tile'?'on':''}`} onClick={()=>setViewMode('tile')} title="타일형">▦</button>
+            <button className={`ft ${viewMode==='list'?'on':''}`} onClick={()=>setViewMode('list')} title="목록형">☰</button>
+          </div>
+          <div style={{marginLeft:'auto'}}><button className="btn bp bsm" onClick={onAdd}>+ 상품 추가</button></div>
+        </div>
+
+        {sorted.length>0?(viewMode==='tile'?
+          <div className="grid">{sorted.map(p=><Card key={p.id} p={p} onClick={()=>onSel(p)} onUpdate={onUpdate}/>)}</div>:
+          <div className="tbl-wrap" style={{maxHeight:'none'}}><table className="tbl">
+            <thead><tr><th style={{width:40}}></th><th>상품명</th><th>가격</th><th>리뷰</th><th>키워드</th><th>최고순위</th><th>변동</th><th>체크시간</th><th></th></tr></thead>
+            <tbody>{sorted.map(p=>{const best=Math.min(...(p.keywords?.map(k=>k.latest_rank||999)||[999]));const lastCk=p.keywords?.find(k=>k.last_checked)?.last_checked;
+              return<tr key={p.id} style={{cursor:'pointer'}} onClick={()=>onSel(p)}>
+                <td><div style={{width:36,height:36,borderRadius:4,overflow:'hidden',background:'#f0f0f0',display:'flex',alignItems:'center',justifyContent:'center'}}>{p.thumbnail_url?<img src={p.thumbnail_url} style={{width:36,height:36,objectFit:'cover'}} onError={e=>{e.target.style.display='none';e.target.parentNode.innerHTML='🐟';}}/>:<span>🐟</span>}</div></td>
+                <td style={{fontWeight:600,fontSize:11,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.product_name}</td>
+                <td style={{fontWeight:700,color:'var(--pri)',fontSize:11}}>{p.price>0?fmt(p.price)+'원':'-'}</td>
+                <td style={{fontSize:11,color:'var(--gt)'}}>{fmt(p.review_count||0)}</td>
+                <td>{p.keywords?.map(kw=><span key={kw.id} style={{display:'inline-block',padding:'1px 5px',borderRadius:3,fontSize:9,fontWeight:600,marginRight:3,marginBottom:1,background:kw.latest_rank===1?'#FFF8E0':kw.latest_rank&&kw.latest_rank<=10?'#E8FFF0':'#F5F5F5',color:kw.latest_rank===1?'#CC8800':kw.latest_rank&&kw.latest_rank<=10?'#00A833':'#888'}}>{kw.keyword}</span>)}</td>
+                <td style={{fontWeight:700,fontSize:12,color:best===1?'var(--gold)':best<=10?'var(--ok)':best<=300?'var(--td)':'var(--gt)'}}>{best<=300?best+'순위':'순위권 밖'}</td>
+                <td>{p.keywords?.map(kw=>{const c=chg(kw.prev_rank,kw.latest_rank);return<div key={kw.id}><span className={`kw-c ${c.c}`} style={{fontSize:9}}>{c.t}</span></div>;})}</td>
+                <td style={{fontSize:9,color:'var(--gt)'}}>{lastCk?kst(lastCk):'-'}</td>
+                <td><button className="btn bs bxs bd" onClick={e=>{e.stopPropagation();if(confirm('삭제?'))fetch(`/api/products/${p.id}`,{method:'DELETE'}).then(()=>onUpdate());}}>삭제</button></td>
+              </tr>;})}
+            </tbody>
+          </table></div>
+        ):<div className="empty">표시할 상품이 없습니다</div>}
+      </div>);
+    }
+
+    function Card({p,onClick,onUpdate}){
+      const best=Math.min(...(p.keywords?.map(k=>k.latest_rank||999)||[999]));
+      const isR1=best===1;
+      const lastCk=p.keywords?.find(k=>k.last_checked)?.last_checked;
+      const del=async e=>{e.stopPropagation();if(!confirm('삭제?'))return;try{const r=await fetch(`/api/products/${p.id}`,{method:'DELETE'});if(r.ok)onUpdate();}catch(e){}};
+
+      return(<div className={`card fade ${isR1?'r1':''}`} onClick={onClick}>
+        {isR1&&<div className="card-crown">1순위</div>}
+        <div className="card-img">{p.thumbnail_url?<img src={p.thumbnail_url} alt="" onError={e=>{e.target.style.display='none';e.target.parentNode.innerHTML='<span style="font-size:28px;color:#ccc">🐟</span>';}}/>:<span style={{fontSize:28,color:'#ccc'}}>🐟</span>}</div>
+        <div className="card-body">
+          <div className="card-name">{p.product_name}</div>
+          <div className="card-meta">
+            {p.price>0&&<span className="card-price">{fmt(p.price)}원</span>}
+            <span className="card-rv">리뷰 {fmt(p.review_count||0)}</span>
+          </div>
+          {lastCk&&<div className="card-time">체크 {kst(lastCk)}</div>}
+          <div className="kws">
+            {p.keywords?.length>0?p.keywords.map(kw=>{
+              const c=chg(kw.prev_rank,kw.latest_rank);
+              return<div key={kw.id} className="kw"><span className={`kw-r ${rCls(kw.latest_rank)}`}>{rTxt(kw.latest_rank)}</span><span className="kw-n">{kw.keyword}</span><span className={`kw-c ${c.c}`}>{c.t}</span></div>;
+            }):<span style={{fontSize:9,color:'var(--gt)'}}>키워드 없음</span>}
+          </div>
+        </div>
+        <div className="card-acts">
+          <button className="btn bs bxs" onClick={e=>{e.stopPropagation();onClick();}}>상세</button>
+          <button className="btn bs bxs bd" onClick={del}>삭제</button>
+        </div>
+      </div>);
+    }
+
+    function ProdModal({product,onClose,onUpdate,toast_}){
+      const[kws,setKws]=useState(product.keywords||[]);
+      const[nk,setNk]=useState('');
+      const[hist,setHist]=useState(null);
+      const[selKw,setSelKw]=useState(product.keywords?.[0]?.id||null);
+      const[ckId,setCkId]=useState(null);
+      const[editId,setEditId]=useState(null);
+      const[editVal,setEditVal]=useState('');
+      const[cp,setCp]=useState('week');
+      const cRef=useRef(null);const cI=useRef(null);
+
+      useEffect(()=>{if(selKw)loadH(selKw);},[selKw,cp]);
+
+      const loadH=async kwId=>{try{
+        let url=`/api/rankings/history/${kwId}`;const now=new Date();const ps=[];
+        if(cp==='day'){const d=toKST(now);ps.push('from='+d,'to='+d);}
+        else if(cp==='yesterday'){const y=toKST(new Date(now.getTime()-86400000));ps.push('from='+y,'to='+y);}
+        else if(cp==='week'){const w=toKST(new Date(now.getTime()-7*86400000));ps.push('from='+w);}
+        else if(cp==='month'){const m=toKST(new Date(now.getTime()-30*86400000));ps.push('from='+m);}
+        if(ps.length)url+='?'+ps.join('&');
+        const r=await fetch(url);if(r.ok){const d=await r.json();setHist(d);drawC(d);}
+      }catch(e){}};
+
+      const toKST=d=>{const k=new Date(d.getTime()+9*3600000);return k.toISOString().slice(0,10);};
+
+      const drawC=data=>{if(!cRef.current){return;}if(cI.current)cI.current.destroy();if(!data?.length)return;
+        const rev=data.slice().reverse();
+        const labels=rev.map(h=>kst(h.checked_at));
+        const vals=rev.map(h=>h.rank_position||null);
+        cI.current=new Chart(cRef.current,{type:'line',data:{labels,datasets:[{label:'순위',data:vals,borderColor:'#0068E5',backgroundColor:'rgba(0,104,229,.08)',fill:true,tension:.3,pointRadius:3,pointBackgroundColor:'#0068E5'}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{reverse:true,min:1,title:{display:true,text:'순위'},ticks:{stepSize:1}}},plugins:{legend:{display:false}}}});
+      };
+
+      const addKw=async()=>{if(!nk.trim())return;try{const r=await fetch('/api/keywords',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:product.id,keyword:nk.trim(),is_auto:false})});if(r.ok){const d=await r.json();setNk('');onUpdate();setKws([...kws,{id:d.keywordId,keyword:nk.trim(),is_auto_extracted:0,latest_rank:null}]);}else{const e=await r.json();toast_(e.error||'실패','err');}}catch(e){toast_('실패','err');}};
+      const delKw=async id=>{if(!confirm('삭제?'))return;try{const r=await fetch(`/api/keywords/${id}`,{method:'DELETE'});if(r.ok){setKws(kws.filter(k=>k.id!==id));onUpdate();}}catch(e){}};
+      const checkKw=async id=>{setCkId(id);try{const r=await fetch('/api/rankings/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword_id:id})});if(r.ok){onUpdate();loadH(id);setSelKw(id);}}catch(e){}finally{setCkId(null);}};
+      const saveEdit=async id=>{if(!editVal.trim())return;try{const r=await fetch(`/api/keywords/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword:editVal.trim()})});if(r.ok){setKws(kws.map(k=>k.id===id?{...k,keyword:editVal.trim()}:k));setEditId(null);onUpdate();toast_('수정됨');}else{const e=await r.json();toast_(e.error||'실패','err');}}catch(e){toast_('실패','err');}};
+
+      return(<div className="ov" onClick={onClose}><div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="mh"><span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{product.product_name}</span><button className="mx" onClick={onClose}>✕</button></div>
+        <div className="ms" style={{display:'flex',gap:10}}>
+          {product.thumbnail_url&&<img src={product.thumbnail_url} alt="" style={{width:64,height:64,borderRadius:6,objectFit:'cover'}} onError={e=>e.target.style.display='none'}/>}
+          <div>
+            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:2}}>
+              {product.price>0&&<span style={{fontWeight:700,color:'var(--pri)',fontSize:13}}>{fmt(product.price)}원</span>}
+              <span style={{fontSize:11,color:'var(--gt)'}}>리뷰 {fmt(product.review_count||0)}</span>
+            </div>
+            {product.product_url&&<a href={product.product_url} target="_blank" rel="noreferrer" style={{fontSize:10,color:'var(--pri)'}}>스토어 →</a>}
+          </div>
+        </div>
+
+        <div className="ms">
+          <div className="ml">키워드 ({kws.length}/5)</div>
+          {kws.length<5&&<div style={{display:'flex',gap:4,marginBottom:6}}><input className="inp" placeholder="키워드..." value={nk} onChange={e=>setNk(e.target.value)} onKeyPress={e=>e.key==='Enter'&&addKw()} style={{flex:1}}/><button className="btn bp bsm" onClick={addKw}>추가</button></div>}
+          <div style={{maxHeight:160,overflowY:'auto'}}>
+            <table className="tbl"><thead><tr><th>키워드</th><th>구분</th><th>순위</th><th>전일대비</th><th>체크</th><th></th></tr></thead>
+            <tbody>{kws.map(kw=>{const c=chg(kw.prev_rank,kw.latest_rank);const ed=editId===kw.id;return(
+              <tr key={kw.id} style={{background:selKw===kw.id?'var(--pri-l)':'',cursor:'pointer'}} onClick={()=>setSelKw(kw.id)}>
+                <td style={{fontWeight:600}}>{ed?<div style={{display:'flex',gap:2}}><input className="inp" value={editVal} onChange={e=>setEditVal(e.target.value)} onKeyPress={e=>e.key==='Enter'&&saveEdit(kw.id)} style={{padding:'2px 4px',fontSize:10,width:70}} autoFocus/><button className="btn bp bxs" onClick={e=>{e.stopPropagation();saveEdit(kw.id);}}>저장</button></div>:<span onDoubleClick={e=>{e.stopPropagation();setEditId(kw.id);setEditVal(kw.keyword);}}>{kw.keyword}</span>}</td>
+                <td><span style={{fontSize:8,padding:'1px 4px',borderRadius:3,background:kw.is_auto_extracted?'#E8F2FF':'#FFF3E0',color:kw.is_auto_extracted?'#0068E5':'#FF8F00'}}>{kw.is_auto_extracted?'자동':'수동'}</span></td>
+                <td style={{fontWeight:700,color:kw.latest_rank===1?'var(--gold)':kw.latest_rank&&kw.latest_rank<=10?'var(--ok)':'var(--gt)'}}>{rTxt(kw.latest_rank)}</td>
+                <td><span className={`kw-c ${c.c}`} style={{fontSize:10}}>{c.t}</span></td>
+                <td style={{fontSize:9,color:'var(--gt)'}}>{kst(kw.last_checked)}</td>
+                <td style={{whiteSpace:'nowrap'}}>
+                  <button className="btn bp bxs" onClick={e=>{e.stopPropagation();checkKw(kw.id);}} disabled={ckId===kw.id}>{ckId===kw.id?'...':'조회'}</button>
+                  <button className="btn bs bxs" style={{marginLeft:2}} onClick={e=>{e.stopPropagation();setEditId(kw.id);setEditVal(kw.keyword);}}>수정</button>
+                  <button className="btn bs bxs bd" style={{marginLeft:2}} onClick={e=>{e.stopPropagation();delKw(kw.id);}}>삭제</button>
+                </td>
+              </tr>);})}</tbody></table>
+          </div>
+        </div>
+
+        {selKw&&<div className="ms">
+          <div className="ml">순위 추이 — {kws.find(k=>k.id===selKw)?.keyword}</div>
+          <div className="cp-tabs">{[{v:'day',l:'당일'},{v:'yesterday',l:'전일'},{v:'week',l:'일주일'},{v:'month',l:'한달'}].map(p=><button key={p.v} className={`cp ${cp===p.v?'on':''}`} onClick={()=>setCp(p.v)}>{p.l}</button>)}</div>
+          <div style={{height:160,position:'relative'}}><canvas ref={cRef}></canvas></div>
+          {(!hist||hist.length===0)&&<div style={{textAlign:'center',color:'var(--gt)',fontSize:10,marginTop:4}}>데이터 없음</div>}
+        </div>}
+
+        <button className="btn bp" style={{width:'100%'}} onClick={onClose}>닫기</button>
+      </div></div>);
+    }
+
+    function AddModal({onClose,onAdd,toast_}){
+      const[fd,setFd]=useState({name:'',url:'',price:'',img:''});
+      const[kws,setKws]=useState([]);const[nk,setNk]=useState('');const[saving,setSaving]=useState(false);const[ext,setExt]=useState(false);
+      const extract=async()=>{if(!fd.url.trim()){toast_('URL 입력','err');return;}setExt(true);try{const r=await fetch('/api/extract',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_url:fd.url})});if(r.ok){const d=await r.json();if(d.product)setFd({...fd,name:d.product.name||fd.name,price:d.product.price||fd.price,img:d.product.image||fd.img});if(d.keywords)setKws(d.keywords.map(k=>({keyword:k,is_auto:true})));toast_('추출 완료');}else toast_('실패','err');}catch(e){toast_('실패','err');}finally{setExt(false);}};
+      const addK=()=>{if(!nk.trim()||kws.length>=5)return;setKws([...kws,{keyword:nk.trim(),is_auto:false}]);setNk('');};
+      const submit=async()=>{if(!fd.name.trim()){toast_('상품명 입력','err');return;}setSaving(true);try{const r=await fetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_name:fd.name,product_url:fd.url,thumbnail_url:fd.img,price:parseInt(fd.price)||0,keywords:kws})});if(r.ok){toast_('추가됨');onAdd();onClose();}else toast_('실패','err');}catch(e){toast_('실패','err');}finally{setSaving(false);}};
+
+      return(<div className="ov" onClick={onClose}><div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="mh"><span>새 상품 추가</span><button className="mx" onClick={onClose}>✕</button></div>
+        <div className="ms"><div className="ml">상품 URL</div><div style={{display:'flex',gap:4}}><input className="inp" placeholder="https://brand.naver.com/..." value={fd.url} onChange={e=>setFd({...fd,url:e.target.value})} style={{flex:1}}/><button className="btn bp bsm" onClick={extract} disabled={ext}>{ext?'...':'자동추출'}</button></div></div>
+        <div className="ms"><div className="ml">상품명 *</div><input className="inp" value={fd.name} onChange={e=>setFd({...fd,name:e.target.value})}/></div>
+        <div className="ms"><div className="ml">가격</div><input className="inp" value={fd.price} onChange={e=>setFd({...fd,price:e.target.value})}/></div>
+        <div className="ms"><div className="ml">이미지 URL</div><input className="inp" value={fd.img} onChange={e=>setFd({...fd,img:e.target.value})}/></div>
+        <div className="ms"><div className="ml">키워드 ({kws.length}/5)</div>
+          {kws.length<5&&<div style={{display:'flex',gap:4,marginBottom:4}}><input className="inp" placeholder="키워드..." value={nk} onChange={e=>setNk(e.target.value)} onKeyPress={e=>e.key==='Enter'&&addK()} style={{flex:1}}/><button className="btn bp bsm" onClick={addK}>추가</button></div>}
+          <div style={{display:'flex',flexWrap:'wrap',gap:4}}>{kws.map((k,i)=><span key={i} style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 8px',borderRadius:12,fontSize:10,background:k.is_auto?'#E8F2FF':'#FFF3E0',color:k.is_auto?'#0068E5':'#FF8F00'}}>{k.keyword}<span style={{cursor:'pointer',fontWeight:700}} onClick={()=>setKws(kws.filter((_,j)=>j!==i))}>✕</span></span>)}</div>
+        </div>
+        <div style={{display:'flex',gap:6}}><button className="btn bs" style={{flex:1}} onClick={onClose}>취소</button><button className="btn bp" style={{flex:1}} onClick={submit} disabled={saving}>{saving?'저장...':'추가'}</button></div>
+      </div></div>);
+    }
+
+    function TablePage(){
+      const[data,setData]=useState(null);const[ld,setLd]=useState(true);const[from,setFrom]=useState('');const[to,setTo]=useState('');
+      const[qp,setQp]=useState('week');const[search,setSearch]=useState('');
+      const load=async(f,t)=>{setLd(true);try{let url='/api/rankings/table';const p=[];if(f)p.push('from='+f);if(t)p.push('to='+t);if(p.length)url+='?'+p.join('&');const r=await fetch(url);if(r.ok)setData(await r.json());}catch(e){}finally{setLd(false);}};
+      useEffect(()=>{load(from,to);},[]);
+      const quickPeriod=v=>{setQp(v);const now=new Date(Date.now()+9*3600000);const td=now.toISOString().slice(0,10);let fd='';
+        if(v==='today'){fd=td;}else if(v==='week'){fd=new Date(now.getTime()-7*86400000).toISOString().slice(0,10);}
+        else if(v==='2week'){fd=new Date(now.getTime()-14*86400000).toISOString().slice(0,10);}
+        else if(v==='month'){fd=new Date(now.getTime()-30*86400000).toISOString().slice(0,10);}
+        setFrom(fd);setTo(td);load(fd,td);
+      };
+      const filteredProducts=data?.products?.filter(p=>!search||p.product_name.includes(search)||p.keywords.some(k=>k.keyword.includes(search)))||[];
+      const totalKws=filteredProducts.reduce((s,p)=>s+p.keywords.length,0);
+      const hasData=data?.dates?.length>0;
+
+      // 통계 계산
+      const calcStats=()=>{if(!hasData)return{r1:0,top10:0,avg:0,total:0};let r1=0,top10=0,sum=0,cnt=0;
+        const lastDate=data.dates[0];
+        data.products.forEach(p=>p.keywords.forEach(kw=>{const v=kw.rankings[lastDate];if(v){if(v===1)r1++;if(v<=10)top10++;sum+=v;cnt++;}}));
+        return{r1,top10,avg:cnt?Math.round(sum/cnt):0,total:cnt};
+      };
+      const stats=calcStats();
+
+      return(<div className="fade">
+        {/* 헤더 영역 */}
+        <div style={{background:'var(--bg)',borderRadius:'var(--r)',padding:'16px 20px',boxShadow:'var(--sh)',marginBottom:14}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12,flexWrap:'wrap',gap:8}}>
+            <h2 style={{fontSize:15,fontWeight:700,margin:0}}>기간별 순위 조회</h2>
+            <div style={{display:'flex',gap:4,alignItems:'center'}}>
+              <input className="inp" placeholder="상품명/키워드 검색..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:160,fontSize:11}}/>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+            <div className="ftabs" style={{background:'#F5F7FA'}}>
+              {[{v:'today',l:'오늘'},{v:'week',l:'1주일'},{v:'2week',l:'2주일'},{v:'month',l:'1개월'}].map(t=>
+                <button key={t.v} className={`ft ${qp===t.v?'on':''}`} onClick={()=>quickPeriod(t.v)}>{t.l}</button>)}
+            </div>
+            <div style={{display:'flex',gap:4,alignItems:'center'}}>
+              <input type="date" className="inp" style={{width:130,fontSize:11}} value={from} onChange={e=>setFrom(e.target.value)}/>
+              <span style={{color:'var(--gt)',fontSize:11}}>~</span>
+              <input type="date" className="inp" style={{width:130,fontSize:11}} value={to} onChange={e=>setTo(e.target.value)}/>
+              <button className="btn bp bsm" onClick={()=>{setQp('');load(from,to);}}>조회</button>
+            </div>
+            {data?.from&&<span style={{fontSize:10,color:'var(--gt)',marginLeft:4}}>{data.from} ~ {data.to}</span>}
+          </div>
+        </div>
+
+        {/* 요약 카드 */}
+        {hasData&&<div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:14}}>
+          <div style={{background:'var(--bg)',borderRadius:'var(--r)',padding:'10px 14px',boxShadow:'var(--sh)',borderLeft:'3px solid var(--gold)'}}>
+            <div style={{fontSize:9,fontWeight:600,color:'var(--gt)',marginBottom:2}}>1순위 키워드</div>
+            <div style={{fontSize:20,fontWeight:800,color:'var(--gold)'}}>{stats.r1}개</div>
+          </div>
+          <div style={{background:'var(--bg)',borderRadius:'var(--r)',padding:'10px 14px',boxShadow:'var(--sh)',borderLeft:'3px solid var(--ok)'}}>
+            <div style={{fontSize:9,fontWeight:600,color:'var(--gt)',marginBottom:2}}>TOP10 키워드</div>
+            <div style={{fontSize:20,fontWeight:800,color:'var(--ok)'}}>{stats.top10}개</div>
+          </div>
+          <div style={{background:'var(--bg)',borderRadius:'var(--r)',padding:'10px 14px',boxShadow:'var(--sh)',borderLeft:'3px solid var(--pri)'}}>
+            <div style={{fontSize:9,fontWeight:600,color:'var(--gt)',marginBottom:2}}>평균 순위</div>
+            <div style={{fontSize:20,fontWeight:800,color:'var(--pri)'}}>{stats.avg}순위</div>
+          </div>
+          <div style={{background:'var(--bg)',borderRadius:'var(--r)',padding:'10px 14px',boxShadow:'var(--sh)',borderLeft:'3px solid #8B5CF6'}}>
+            <div style={{fontSize:9,fontWeight:600,color:'var(--gt)',marginBottom:2}}>조회 키워드</div>
+            <div style={{fontSize:20,fontWeight:800,color:'#8B5CF6'}}>{stats.total}개</div>
+          </div>
+        </div>}
+
+        {/* 테이블 */}
+        {ld?<div className="loading"><div className="spinner"></div><span style={{color:'var(--gt)',fontSize:11}}>데이터 로딩 중...</span></div>:
+        hasData?<div style={{background:'var(--bg)',borderRadius:'var(--r)',boxShadow:'var(--sh)',overflow:'hidden'}}>
+          <div style={{padding:'10px 16px',borderBottom:'1px solid var(--gl)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style={{fontSize:11,fontWeight:600}}>상품 {filteredProducts.length}개 · 키워드 {totalKws}개 · 날짜 {data.dates.length}일</span>
+            <a href="/api/report/csv" className="btn bs bxs" style={{textDecoration:'none'}}>CSV</a>
+          </div>
+          <div style={{maxHeight:'calc(100vh - 320px)',overflow:'auto'}}>
+          <table className="tbl">
+            <thead><tr>
+              <th style={{minWidth:140,position:'sticky',left:0,background:'#F0F4F8',zIndex:3,borderRight:'2px solid var(--gl)',padding:'8px 10px',fontSize:11}}>상품명</th>
+              <th style={{minWidth:70,background:'#F0F4F8',padding:'8px 6px',fontSize:11}}>키워드</th>
+              {data.dates.map(d=><th key={d} style={{minWidth:62,textAlign:'center',background:'#F0F4F8',padding:'8px 4px',fontSize:10,fontWeight:700}}>{d.slice(5).replace('-','/')}</th>)}
+            </tr></thead>
+            <tbody>{filteredProducts.map((p,pi)=>p.keywords.map((kw,ki)=>{
+              const vals=data.dates.map(d=>kw.rankings[d]);
+              const trend=vals.length>=2&&vals[0]&&vals[vals.length-1]?(vals[vals.length-1]-vals[0]):0;
+              return(
+              <tr key={p.product_id+'-'+kw.keyword_id} style={{background:pi%2===0?'var(--bg)':'#FAFBFC'}}>
+                {ki===0&&<td rowSpan={p.keywords.length} style={{fontWeight:600,position:'sticky',left:0,background:pi%2===0?'var(--bg)':'#FAFBFC',verticalAlign:'middle',borderRight:'2px solid var(--gl)',fontSize:10,padding:'6px 10px',lineHeight:1.4,maxWidth:180}}>{p.product_name}</td>}
+                <td style={{fontSize:10,color:'#555',fontWeight:500,padding:'5px 6px',whiteSpace:'nowrap'}}>
+                  <span style={{display:'inline-flex',alignItems:'center',gap:3}}>
+                    {kw.keyword}
+                    {trend!==0&&<span style={{fontSize:8,fontWeight:700,color:trend>0?'var(--ok)':'var(--dn)'}}>{trend>0?'▲':'▼'}</span>}
+                  </span>
+                </td>
+                {data.dates.map(d=>{const v=kw.rankings[d];const t=kw.times?.[d];
+                  const bg=v===1?'#FFF8E0':v&&v<=3?'#FFF3E0':v&&v<=10?'#E8FFF0':'';
+                  return<td key={d} style={{textAlign:'center',fontWeight:v?700:400,color:v===1?'#CC8800':v&&v<=3?'var(--bronze)':v&&v<=10?'#00A833':v?'var(--td)':'#ddd',fontSize:v?11:10,padding:'5px 2px',background:bg}} title={t?kst(t):''}>{v||'-'}</td>;})}
+              </tr>);}))}
+            </tbody>
+          </table>
+          </div>
+          <div style={{padding:'8px 16px',borderTop:'1px solid var(--gl)',fontSize:9,color:'var(--gt)',display:'flex',justifyContent:'space-between'}}>
+            <span>🟡 1순위 · 🟠 3위이내 · 🟢 TOP10</span>
+            <span>셀에 마우스를 올리면 체크 시간이 표시됩니다</span>
+          </div>
+        </div>:
+        <div style={{background:'var(--bg)',borderRadius:'var(--r)',padding:'40px 20px',boxShadow:'var(--sh)',textAlign:'center'}}>
+          <div style={{fontSize:36,marginBottom:8}}>📊</div>
+          <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>아직 순위 데이터가 없습니다</div>
+          <div style={{fontSize:11,color:'var(--gt)'}}>대시보드에서 "전체 순위 조회"를 실행하면 이곳에 기간별 데이터가 쌓입니다.</div>
+        </div>}
+      </div>);
+    }
+
+    function AlertModal({onClose}){
+      const[a,setA]=useState(null);const[ld,setLd]=useState(true);const[sv,setSv]=useState(false);
+      useEffect(()=>{(async()=>{try{const r=await fetch('/api/alerts');if(r.ok)setA(await r.json());}catch(e){}finally{setLd(false);}})();},[]);
+      const save=async()=>{setSv(true);try{await fetch('/api/alerts',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(a)});onClose();}catch(e){}finally{setSv(false);}};
+      return(<div className="ov" onClick={onClose}><div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:380}}>
+        <div className="mh"><span>알림 설정</span><button className="mx" onClick={onClose}>✕</button></div>
+        {ld?<div className="loading"><div className="spinner"></div></div>:a&&<div>
+          <div className="ms"><label style={{display:'flex',alignItems:'center',fontWeight:600,gap:6,fontSize:12}}>이메일 알림<label className="tog"><input type="checkbox" checked={a.is_enabled||false} onChange={e=>setA({...a,is_enabled:e.target.checked})}/><span className="tog-s"></span></label></label></div>
+          <div className="ms"><div className="ml">이메일</div><input className="inp" placeholder="email@example.com" value={a.email||''} onChange={e=>setA({...a,email:e.target.value})}/></div>
+          <div className="ms"><div className="ml">알림 기준</div><select className="inp" value={a.rank_drop_threshold||5} onChange={e=>setA({...a,rank_drop_threshold:parseInt(e.target.value)})}><option value="1">모든 변동</option><option value="3">3순위 이상</option><option value="5">5순위 이상</option><option value="10">10순위 이상</option></select></div>
+          <div style={{display:'flex',gap:6}}><button className="btn bs" style={{flex:1}} onClick={onClose}>취소</button><button className="btn bp" style={{flex:1}} onClick={save} disabled={sv}>{sv?'저장...':'저장'}</button></div>
+        </div>}
+      </div></div>);
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
