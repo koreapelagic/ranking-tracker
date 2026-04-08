@@ -178,14 +178,23 @@ app.post('/api/rankings/check', async (req, res) => {
     if (result.productInfo) {
       const price = result.productInfo.price || 0;
       const reviews = result.productInfo.reviewCount || 0;
+      const image = result.productInfo.image || '';
 
-      // ★ 이미지는 CSV 원본을 유지하므로 절대 덮어쓰지 않음
-      // 가격, 리뷰수만 업데이트
+      // 가격, 리뷰수 업데이트
       if (price || reviews) {
         run(
           'UPDATE products SET price = CASE WHEN ? > 0 THEN ? ELSE price END, review_count = CASE WHEN ? > 0 THEN ? ELSE review_count END, updated_at = ? WHERE id = ?',
           [price, price, reviews, reviews, kstNow, kw.pid]
         );
+      }
+
+      // ★ 썸네일이 비어있을 때만 네이버 API 이미지로 채움 (기존 이미지는 유지)
+      if (image) {
+        const currentProduct = queryOne('SELECT thumbnail_url FROM products WHERE id = ?', [kw.pid]);
+        if (!currentProduct || !currentProduct.thumbnail_url) {
+          run('UPDATE products SET thumbnail_url = ?, updated_at = ? WHERE id = ?', [image, kstNow, kw.pid]);
+          console.log(`  [썸네일] 이미지 자동 설정: ${image.substring(0, 60)}...`);
+        }
       }
     }
 
