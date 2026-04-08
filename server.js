@@ -32,6 +32,11 @@ app.get('/api/products', (req, res) => {
         WHERE k.product_id = ?
       `, [product.id]);
 
+      // ★ http:// 이미지를 https://로 변환 (Mixed Content 차단 방지)
+      if (product.thumbnail_url && product.thumbnail_url.startsWith('http://')) {
+        product.thumbnail_url = product.thumbnail_url.replace('http://', 'https://');
+      }
+
       return { ...product, keywords };
     });
 
