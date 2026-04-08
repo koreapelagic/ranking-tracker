@@ -14,6 +14,26 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================
+// 이미지 프록시 (네이버 이미지 서버가 HTTPS 미지원이므로 서버에서 대신 가져옴)
+// ============================================================
+
+app.get('/api/image-proxy', async (req, res) => {
+  try {
+    const imageUrl = req.query.url;
+    if (!imageUrl || !imageUrl.includes('naver.net')) {
+      return res.status(400).send('Invalid URL');
+    }
+    const axios = require('axios');
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: 5000 });
+    res.set('Content-Type', response.headers['content-type'] || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=86400'); // 24시간 캐시
+    res.send(response.data);
+  } catch (e) {
+    res.status(404).send('Image not found');
+  }
+});
+
+// ============================================================
 // 상품 API
 // ============================================================
 
@@ -32,9 +52,10 @@ app.get('/api/products', (req, res) => {
         WHERE k.product_id = ?
       `, [product.id]);
 
-      // ★ http:// 이미지를 https://로 변환 (Mixed Content 차단 방지)
-      if (product.thumbnail_url && product.thumbnail_url.startsWith('http://')) {
-        product.thumbnail_url = product.thumbnail_url.replace('http://', 'https://');
+      // ★ 네이버 이미지를 프록시 경로로 변환 (Mixed Content 차단 방지)
+      if (product.thumbnail_url && product.thumbnail_url.includes('naver.net')) {
+        const originalUrl = product.thumbnail_url.replace('https://', 'http://');
+        product.thumbnail_url = '/api/image-proxy?url=' + encodeURIComponent(originalUrl);
       }
 
       return { ...product, keywords };
