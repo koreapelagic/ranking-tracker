@@ -308,7 +308,7 @@ app.get('/api/dashboard', (req, res) => {
     const totalProducts = queryOne('SELECT COUNT(*) as cnt FROM products')?.cnt || 0;
     const totalKeywords = queryOne('SELECT COUNT(*) as cnt FROM keywords')?.cnt || 0;
     const kstToday = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const todayChecks = queryOne("SELECT COUNT(*) as cnt FROM rankings WHERE DATE(checked_at) = ?", [kstToday])?.cnt || 0;
+    const todayChecks = queryOne("SELECT COUNT(*) as cnt FROM rankings WHERE DATE(datetime(checked_at, '+9 hours')) = ?", [kstToday])?.cnt || 0;
     const rank1Count = queryOne(`
       SELECT COUNT(DISTINCT k.product_id) as cnt
       FROM keywords k
