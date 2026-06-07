@@ -47,7 +47,8 @@ app.get('/api/products', (req, res) => {
           (SELECT rank_position FROM rankings WHERE keyword_id = k.id ORDER BY checked_at DESC LIMIT 1) as latest_rank,
           (SELECT checked_at FROM rankings WHERE keyword_id = k.id ORDER BY checked_at DESC LIMIT 1) as last_checked,
           (SELECT rank_position FROM rankings WHERE keyword_id = k.id ORDER BY checked_at DESC LIMIT 1 OFFSET 1) as prev_rank,
-          (SELECT page_number FROM rankings WHERE keyword_id = k.id ORDER BY checked_at DESC LIMIT 1) as latest_page
+          (SELECT page_number FROM rankings WHERE keyword_id = k.id ORDER BY checked_at DESC LIMIT 1) as latest_page,
+          (SELECT is_catalog FROM rankings WHERE keyword_id = k.id ORDER BY checked_at DESC LIMIT 1) as latest_is_catalog
         FROM keywords k
         WHERE k.product_id = ?
       `, [product.id]);
@@ -196,9 +197,10 @@ app.post('/api/rankings/check', async (req, res) => {
     // KST 시간으로 저장
     const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
 
+    const isCatalog = result.isCatalog ? 1 : 0;
     run(
-      'INSERT INTO rankings (keyword_id, rank_position, page_number, total_results, checked_at) VALUES (?, ?, ?, ?, ?)',
-      [keyword_id, result.rank, result.page, result.totalResults, kstNow]
+      'INSERT INTO rankings (keyword_id, rank_position, page_number, total_results, checked_at, is_catalog) VALUES (?, ?, ?, ?, ?, ?)',
+      [keyword_id, result.rank, result.page, result.totalResults, kstNow, isCatalog]
     );
 
     if (result.productInfo) {
@@ -214,13 +216,10 @@ app.post('/api/rankings/check', async (req, res) => {
         );
       }
 
-      // ★ 썸네일이 비어있을 때만 네이버 API 이미지로 채움 (기존 이미지는 유지)
+      // ★ 항상 최신 네이버 API 이미지로 썸네일 업데이트
       if (image) {
-        const currentProduct = queryOne('SELECT thumbnail_url FROM products WHERE id = ?', [kw.pid]);
-        if (!currentProduct || !currentProduct.thumbnail_url) {
-          run('UPDATE products SET thumbnail_url = ?, updated_at = ? WHERE id = ?', [image, kstNow, kw.pid]);
-          console.log(`  [썸네일] 이미지 자동 설정: ${image.substring(0, 60)}...`);
-        }
+        run('UPDATE products SET thumbnail_url = ?, updated_at = ? WHERE id = ?', [image, kstNow, kw.pid]);
+        console.log(`  [썸네일] 이미지 업데이트: ${image.substring(0, 60)}...`);
       }
     }
 

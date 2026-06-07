@@ -75,9 +75,13 @@ async function initDB() {
       page_number INTEGER DEFAULT 1,
       total_results INTEGER,
       checked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      is_catalog INTEGER DEFAULT 0,
       FOREIGN KEY (keyword_id) REFERENCES keywords(id) ON DELETE CASCADE
     )
   `);
+
+  // is_catalog 컬럼 마이그레이션 (기존 DB 호환)
+  try { dbInstance.run('ALTER TABLE rankings ADD COLUMN is_catalog INTEGER DEFAULT 0'); } catch(e) {}
 
   dbInstance.run(`
     CREATE TABLE IF NOT EXISTS alert_settings (

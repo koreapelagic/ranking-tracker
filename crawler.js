@@ -256,11 +256,14 @@ async function searchRanking(keyword, storeName = '가시제거연구소', produ
 }
 
 function buildResult(match, keyword, candidateCount) {
+  // 카탈로그 묶음 감지: 상품명 앞에 "코리아펠라직" 포함 여부
+  const isCatalog = /^코리아펠라직/i.test(match.item.title.trim());
   return {
     found: true,
     rank: match.rank,
     page: match.page,
     totalResults: match.totalResults,
+    isCatalog,
     productInfo: {
       ...match.item,
       reviewCount: 0,

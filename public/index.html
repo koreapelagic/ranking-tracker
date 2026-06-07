@@ -408,7 +408,7 @@ ${d.bigDroppers.map(r=>`<span class="tag tag-dn">▼ ${r.keyword} ${r.prev}→${
           <div className="kws">
             {p.keywords?.length>0?p.keywords.map(kw=>{
               const c=chg(kw.prev_rank,kw.latest_rank);
-              return<div key={kw.id} className="kw"><span className={`kw-r ${rCls(kw.latest_rank)}`}>{rTxt(kw.latest_rank)}</span><span className="kw-n">{kw.keyword}</span><span className={`kw-c ${c.c}`}>{c.t}</span></div>;
+              return<div key={kw.id} className="kw"><span className={`kw-r ${rCls(kw.latest_rank)}`}>{rTxt(kw.latest_rank)}</span>{kw.latest_is_catalog?<span style={{fontSize:8,background:'#E8F0FF',color:'#3366CC',borderRadius:3,padding:'1px 4px',marginLeft:3,fontWeight:700}}>카탈로그</span>:null}<span className="kw-n">{kw.keyword}</span><span className={`kw-c ${c.c}`}>{c.t}</span></div>;
             }):<span style={{fontSize:9,color:'var(--gt)'}}>키워드 없음</span>}
           </div>
         </div>
