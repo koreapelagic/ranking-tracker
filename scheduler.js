@@ -38,22 +38,31 @@ async function runRankingCheck() {
           kw.purl || ''
         );
 
-        // 순위 저장
+        // 순위 저장 (KST 시간)
+        const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+        const isCatalog = result.isCatalog ? 1 : 0;
         run(
-          'INSERT INTO rankings (keyword_id, rank_position, page_number, total_results) VALUES (?, ?, ?, ?)',
-          [kw.keyword_id, result.rank, result.page, result.totalResults]
+          'INSERT INTO rankings (keyword_id, rank_position, page_number, total_results, checked_at, is_catalog) VALUES (?, ?, ?, ?, ?, ?)',
+          [kw.keyword_id, result.rank, result.page, result.totalResults, kstNow, isCatalog]
         );
 
-        // 상품 정보 업데이트 (★ 이미지는 CSV 원본 유지, 덮어쓰지 않음)
+        // 상품 정보 업데이트
         if (result.productInfo) {
           const price = result.productInfo.price || 0;
           const reviews = result.productInfo.reviewCount || 0;
+          const image = result.productInfo.image || '';
 
           if (price || reviews) {
             run(
-              "UPDATE products SET price = CASE WHEN ? > 0 THEN ? ELSE price END, review_count = CASE WHEN ? > 0 THEN ? ELSE review_count END, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-              [price, price, reviews, reviews, kw.pid]
+              "UPDATE products SET price = CASE WHEN ? > 0 THEN ? ELSE price END, review_count = CASE WHEN ? > 0 THEN ? ELSE review_count END, updated_at = ? WHERE id = ?",
+              [price, price, reviews, reviews, kstNow, kw.pid]
             );
+          }
+
+          // ★ 항상 최신 네이버 API 이미지로 썸네일 업데이트
+          if (image) {
+            run('UPDATE products SET thumbnail_url = ?, updated_at = ? WHERE id = ?', [image, kstNow, kw.pid]);
+            console.log(`  [썸네일] 업데이트: ${image.substring(0, 60)}...`);
           }
         }
 
