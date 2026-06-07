@@ -229,19 +229,19 @@ async function searchRanking(keyword, storeName = '가시제거연구소', produ
         return buildResult(bestMatch, keyword, candidates.length);
       }
 
-      // 3. 유사도 또는 핵심토큰 부족 — 매칭 거부
+      // 3. 유사도 또는 핵심토큰 부족 — 카탈로그 폴백 시도
       const simCandidates = candidates.filter(c => c.matchType === 'SIMILARITY');
-      console.log(`  [크롤러v11] ⚠️ 스토어 내 ${simCandidates.length}개 발견되었으나 매칭 조건 미달:`);
-      simCandidates.slice(0, 5).forEach(c => {
-        console.log(`    ${c.rank}위 (${(c.similarity*100).toFixed(0)}%, 핵심${c.coreMatch?'O':'X'}) "${c.item.title.substring(0, 50)}"`);
-      });
-      console.log(`    → DB 상품명: "${productName.substring(0, 50)}"`);
+      console.log(`  [크롤러v11] ⚠️ 스토어 내 ${simCandidates.length}개 발견되었으나 매칭 조건 미달 → 카탈로그 폴백 시도`);
       const best = simCandidates.sort((a, b) => b.similarity - a.similarity)[0];
+      const catalogResult = await searchCatalogFallback(keyword, productName, clientId, clientSecret, maxPages);
+      if (catalogResult) return catalogResult;
       return { rank: null, page: null, totalResults: best?.totalResults || 0, productInfo: null, message: `매칭조건 미달 (유사도${(best?.similarity*100||0).toFixed(0)}%, 핵심토큰${best?.coreMatch?'일치':'불일치'})` };
     }
 
-    // 못 찾음
-    console.log(`  [크롤러v11] ❌ 300위 내 미발견: "${keyword}"`);
+    // 못 찾음 — 카탈로그 폴백 시도
+    console.log(`  [크롤러v11] ❌ 300위 내 미발견: "${keyword}" → 카탈로그 폴백 시도`);
+    const catalogFallback = await searchCatalogFallback(keyword, productName, clientId, clientSecret, maxPages);
+    if (catalogFallback) return catalogFallback;
     return { rank: null, page: null, totalResults: 0, productInfo: null, message: `"${keyword}" 300위 내 미발견` };
 
   } catch (error) {
@@ -255,8 +255,63 @@ async function searchRanking(keyword, storeName = '가시제거연구소', produ
   }
 }
 
+/**
+ * 카탈로그 폴백: 일반 매칭 실패 시 "코리아펠라직"으로 시작하는 카탈로그 상품 탐색
+ */
+async function searchCatalogFallback(keyword, productName, clientId, clientSecret, maxPages) {
+  try {
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      const start = (pageNum - 1) * 100 + 1;
+      const response = await axios.get('https://openapi.naver.com/v1/search/shop.json', {
+        params: { query: keyword, display: 100, start, sort: 'sim' },
+        headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret },
+        timeout: 10000,
+      });
+      const items = response.data.items || [];
+      const totalResults = response.data.total || 0;
+      if (items.length === 0) break;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const rank = start + i;
+        const cleanTitle = (item.title || '').replace(/<[^>]*>/g, '');
+
+        // "코리아펠라직"으로 시작하는 카탈로그 상품만 대상
+        if (!/^코리아펠라직/i.test(cleanTitle.trim())) continue;
+
+        // 상품명 핵심 키워드가 카탈로그 타이틀에 포함되는지 확인
+        const { score } = calcSimilarity(cleanTitle, productName);
+        if (score >= 0.5) {
+          console.log(`  [크롤러v11] ✅ ${rank}위 [카탈로그폴백 유사도${(score*100).toFixed(0)}%] "${cleanTitle.substring(0, 40)}"`);
+          return {
+            found: true,
+            rank,
+            page: pageNum,
+            totalResults,
+            isCatalog: true,
+            productInfo: {
+              title: cleanTitle,
+              price: parseInt(item.lprice) || 0,
+              image: item.image || '',
+              mallName: item.mallName || '',
+              productId: (item.productId || '').toString(),
+              link: item.link || '',
+              reviewCount: 0,
+            },
+            debug: { method: 'CATALOG_FALLBACK', keyword, similarity: score },
+          };
+        }
+      }
+      if (start + items.length > totalResults) break;
+      await new Promise(r => setTimeout(r, 200));
+    }
+  } catch (e) {
+    console.error('  [카탈로그폴백] 에러:', e.message);
+  }
+  return null;
+}
+
 function buildResult(match, keyword, candidateCount) {
-  // 카탈로그 묶음 감지: 상품명 앞에 "코리아펠라직" 포함 여부
   const isCatalog = /^코리아펠라직/i.test(match.item.title.trim());
   return {
     found: true,
