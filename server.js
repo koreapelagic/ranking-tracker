@@ -118,6 +118,53 @@ app.delete('/api/products/:id', (req, res) => {
   }
 });
 
+// 썸네일 새로고침 — 상품 URL에서 직접 최신 이미지 가져오기
+app.post('/api/products/:id/refresh-thumbnail', async (req, res) => {
+  try {
+    const product = queryOne('SELECT id, product_url, thumbnail_url FROM products WHERE id = ?', [req.params.id]);
+    if (!product) return res.status(404).json({ error: '상품 없음' });
+    if (!product.product_url) return res.status(400).json({ error: '상품 URL 없음' });
+
+    const productInfo = await fetchProductInfo(product.product_url);
+    if (!productInfo || !productInfo.image) return res.status(400).json({ error: '이미지를 가져올 수 없습니다.' });
+
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+    run('UPDATE products SET thumbnail_url = ?, updated_at = ? WHERE id = ?', [productInfo.image, kstNow, product.id]);
+    console.log(`[썸네일 새로고침] 상품 ${product.id}: ${productInfo.image.substring(0, 60)}...`);
+    res.json({ success: true, image: productInfo.image });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 전체 상품 썸네일 일괄 새로고침
+app.post('/api/products/refresh-all-thumbnails', async (req, res) => {
+  try {
+    const products = queryAll('SELECT id, product_url FROM products WHERE product_url != ""');
+    res.json({ success: true, message: `${products.length}개 상품 썸네일 새로고침 시작` });
+    // 백그라운드 실행
+    (async () => {
+      let updated = 0;
+      for (const p of products) {
+        try {
+          if (!p.product_url || p.product_url.includes('catalog')) continue;
+          const info = await fetchProductInfo(p.product_url);
+          if (info?.image) {
+            const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+            run('UPDATE products SET thumbnail_url = ?, updated_at = ? WHERE id = ?', [info.image, kstNow, p.id]);
+            updated++;
+            console.log(`[썸네일 일괄] ${p.id} 업데이트`);
+          }
+          await new Promise(r => setTimeout(r, 500));
+        } catch(e) { console.error(`[썸네일 일괄] ${p.id} 실패:`, e.message); }
+      }
+      console.log(`[썸네일 일괄] 완료: ${updated}/${products.length}개`);
+    })();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.put('/api/products/:id', (req, res) => {
   try {
     const { product_name, product_url, thumbnail_url, price, review_count } = req.body;
