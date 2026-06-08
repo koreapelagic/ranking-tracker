@@ -76,9 +76,13 @@ app.post('/api/products', (req, res) => {
       return res.status(400).json({ error: '상품명은 필수입니다.' });
     }
 
+    // 카탈로그 URL에서 catalog_id 자동 추출
+    const catalogMatch = (product_url || '').match(/catalog\/(\d+)/);
+    const autoCatalogId = catalogMatch ? catalogMatch[1] : null;
+
     const result = run(
-      'INSERT INTO products (product_name, product_url, thumbnail_url, price, review_count) VALUES (?, ?, ?, ?, ?)',
-      [product_name, product_url || '', thumbnail_url || '', price || 0, review_count || 0]
+      'INSERT INTO products (product_name, product_url, thumbnail_url, price, review_count, catalog_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [product_name, product_url || '', thumbnail_url || '', price || 0, review_count || 0, autoCatalogId || null]
     );
     const productId = result.lastInsertRowid;
 
@@ -249,6 +253,19 @@ app.post('/api/extract', async (req, res) => {
 
     if (!product_url) {
       return res.status(400).json({ error: '상품 URL을 입력해주세요.' });
+    }
+
+    // 카탈로그 URL 감지: search.shopping.naver.com/catalog/XXXXXXX
+    const catalogMatch = product_url.match(/catalog\/(\d+)/);
+    if (catalogMatch) {
+      const catalogId = catalogMatch[1];
+      return res.json({
+        success: true,
+        isCatalogUrl: true,
+        catalogId,
+        product: { name: '', price: 0, image: '', reviewCount: 0 },
+        keywords: [],
+      });
     }
 
     const productInfo = await fetchProductInfo(product_url);

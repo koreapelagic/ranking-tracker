@@ -405,6 +405,7 @@ ${d.bigDroppers.map(r=>`<span class="tag tag-dn">▼ ${r.keyword} ${r.prev}→${
             <span className="card-rv">리뷰 {fmt(p.review_count||0)}</span>
           </div>
           {lastCk&&<div className="card-time">체크 {kst(lastCk)}</div>}
+          {p.product_url&&p.product_url.includes('catalog')&&<div style={{fontSize:9,color:'#3366CC',background:'#E8F0FF',borderRadius:3,padding:'1px 6px',display:'inline-block',marginBottom:3,fontWeight:700}}>📦 카탈로그 상품</div>}
           <div className="kws">
             {p.keywords?.length>0?p.keywords.map(kw=>{
               const c=chg(kw.prev_rank,kw.latest_rank);
@@ -504,7 +505,7 @@ ${d.bigDroppers.map(r=>`<span class="tag tag-dn">▼ ${r.keyword} ${r.prev}→${
     function AddModal({onClose,onAdd,toast_}){
       const[fd,setFd]=useState({name:'',url:'',price:'',img:''});
       const[kws,setKws]=useState([]);const[nk,setNk]=useState('');const[saving,setSaving]=useState(false);const[ext,setExt]=useState(false);
-      const extract=async()=>{if(!fd.url.trim()){toast_('URL 입력','err');return;}setExt(true);try{const r=await fetch('/api/extract',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_url:fd.url})});if(r.ok){const d=await r.json();if(d.product)setFd({...fd,name:d.product.name||fd.name,price:d.product.price||fd.price,img:d.product.image||fd.img});if(d.keywords)setKws(d.keywords.map(k=>({keyword:k,is_auto:true})));toast_('추출 완료');}else toast_('실패','err');}catch(e){toast_('실패','err');}finally{setExt(false);}};
+      const extract=async()=>{if(!fd.url.trim()){toast_('URL 입력','err');return;}setExt(true);try{const r=await fetch('/api/extract',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_url:fd.url})});if(r.ok){const d=await r.json();if(d.isCatalogUrl){toast_('카탈로그 URL 감지 (ID:'+d.catalogId+') — 상품명을 직접 입력해주세요');setFd({...fd,name:fd.name||''});}else{if(d.product)setFd({...fd,name:d.product.name||fd.name,price:d.product.price||fd.price,img:d.product.image||fd.img});if(d.keywords)setKws(d.keywords.map(k=>({keyword:k,is_auto:true})));toast_('추출 완료');}}else toast_('실패','err');}catch(e){toast_('실패','err');}finally{setExt(false);}};
       const addK=()=>{if(!nk.trim()||kws.length>=5)return;setKws([...kws,{keyword:nk.trim(),is_auto:false}]);setNk('');};
       const submit=async()=>{if(!fd.name.trim()){toast_('상품명 입력','err');return;}setSaving(true);try{const r=await fetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_name:fd.name,product_url:fd.url,thumbnail_url:fd.img,price:parseInt(fd.price)||0,keywords:kws})});if(r.ok){toast_('추가됨');onAdd();onClose();}else toast_('실패','err');}catch(e){toast_('실패','err');}finally{setSaving(false);}};
 
